@@ -7,6 +7,23 @@ chrome.browserAction.onClicked.addListener(function(tab) {
       onAttach.bind(null, tab.id));
 });
 
+chrome.debugger.onEvent.addListener(function(source, method, params) {
+    if(method === "Target.attachedToTarget") {
+        chrome.debugger.attach({ targetId: params.targetInfo.targetId}, version, () => {
+            console.log("Target.attachedToTarget", params.targetInfo.targetId)
+        });
+    }
+});
+
+chrome.debugger.onDetach.addListener(function(source, reason) {
+    if (chrome.runtime.lastError) {
+        alert(chrome.runtime.lastError.message);
+        return;
+    }
+
+    console.trace("Detached from ", source, reason);
+});
+
 var version = "1.0";
 
 function onAttach(tabId) {
@@ -14,6 +31,17 @@ function onAttach(tabId) {
     alert(chrome.runtime.lastError.message);
     return;
   }
+
+  chrome.debugger.sendCommand({tabId:tabId}, "Target.setAutoAttach", {
+    autoAttach: true,
+    waitForDebuggerOnStart: false,
+    flatten: true
+  }, () => {
+    if (chrome.runtime.lastError) {
+        alert(chrome.runtime.lastError.message);
+        return;
+    }
+  });
 
   chrome.windows.create(
       {url: "headers.html?" + tabId, type: "popup", width: 800, height: 600});
